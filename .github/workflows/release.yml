@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: swift test
+
+      - name: Build and archive macOS app & CLI
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          CLEAN_VERSION="${VERSION#v}"
+          VERSION="$CLEAN_VERSION" ./scripts/build-app.sh --archive
+          cd dist
+          shasum -a 256 TokenWorth-macos-*.zip tokenworth-cli-macos-*.tar.gz > checksums.txt
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            dist/TokenWorth-macos-*.zip \
+            dist/tokenworth-cli-macos-*.tar.gz \
+            dist/checksums.txt \
+            --title "TokenWorth ${{ github.ref_name }}" \
+            --generate-notes

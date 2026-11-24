@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Run unit tests
+        run: swift test
+
+      - name: Build release targets
+        run: swift build -c release
+
+      - name: Smoke test CLI (demo mode)
+        run: |
+          BIN_DIR="$(swift build -c release --show-bin-path)"
+          "$BIN_DIR/tokenworth-cli" summary --demo
+          "$BIN_DIR/tokenworth-cli" models --demo
+          "$BIN_DIR/tokenworth-cli" quota --demo --json | python3 -m json.tool > /dev/null
